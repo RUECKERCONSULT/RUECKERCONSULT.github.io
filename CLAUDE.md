@@ -2,28 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository status
+## What this is
 
-This repository is currently **empty** — no commits, no source files, no configuration. The remote (`rueckerconsult/rueckerconsult.github.io`) has no default branch yet. The repository name follows GitHub's `<user>.github.io` convention, which means content pushed to the default branch will be published as a GitHub Pages site at `https://rueckerconsult.github.io/`.
+A GitHub Pages site (`https://rueckerconsult.github.io/`) hosting four classic arcade games as browser games. Pure static HTML — no build system, no dependencies, no framework. A `.nojekyll` file disables Jekyll processing.
 
-Because there is no code to describe yet, the architecture, build, lint, and test sections of this document are intentionally blank. **Re-run `/init` once real content has been committed** so this file can be regenerated against the actual codebase (static HTML, Jekyll, Hugo, a JS framework, etc. — none of that is decided yet).
+## Structure
 
-## Working on this branch
+- `index.html` — arcade landing page linking to the four games
+- `pacman/index.html` — Pac-Man (1980): tile-based maze, four ghosts with classic scatter/chase targeting (Blinky/Pinky/Inky/Clyde), power pellets, ghost house logic
+- `space-invaders/index.html` — Space Invaders (1978): 5×11 formation, destructible pixel shields, UFO, accelerating march
+- `asteroids/index.html` — Asteroids (1979): vector-style ship physics, splitting rocks, saucer
+- `frogger/index.html` — Frogger (1981): lane-based traffic/river, logs and turtles, five home slots, timer
 
-Per the harness instructions, all work in this session must be developed on the `claude/add-claude-documentation-gvddC` branch and pushed there. Do not push to other branches without explicit user permission. Do not open a pull request unless the user asks for one.
-
-## When adding the first content
-
-A few things worth knowing before the first real commit lands:
-
-- **GitHub Pages publishing source.** For a `<user>.github.io` repo, Pages publishes from the default branch's root by default. If the user wants a different setup (e.g. publish from `/docs`, from `gh-pages`, or via a GitHub Actions workflow), confirm before restructuring — the choice constrains the directory layout.
-- **Jekyll vs. plain static.** GitHub Pages auto-builds Jekyll sites unless a `.nojekyll` file is present at the root. If the user wants plain static HTML or a non-Jekyll generator (Hugo, Astro, Next export, etc.), add `.nojekyll` so underscore-prefixed paths aren't filtered out.
-- **Custom domain.** A `CNAME` file at the repo root configures a custom domain. Don't add or remove one without confirmation.
+Each game is a single self-contained HTML file: inline CSS and one inline `<script>` rendering to a `<canvas>`. Shared conventions across all four: a `snd()` WebAudio beep helper (audio context lazily created on first input), `requestAnimationFrame` loop with delta-time capped at 50 ms, a `state` string machine (`start` / `play` / `gameover` plus game-specific states), keyboard + touch input, hi-scores in `localStorage` (`<game>-hi` keys), German UI text.
 
 ## Commands
 
-None yet — to be filled in once a build system exists.
+No build, lint, or test tooling. To preview locally: `python3 -m http.server` and open `http://localhost:8000`.
 
-## Architecture
+To syntax-check a game's script: extract the inline `<script>` body to a file and run `node --check` on it.
 
-None yet — to be filled in once source files exist.
+## Conventions
+
+- Keep games dependency-free and self-contained in their own directory.
+- UI copy is German; code identifiers and comments are English.
+- Don't add a `CNAME` file or change the Pages publishing setup without confirmation.
