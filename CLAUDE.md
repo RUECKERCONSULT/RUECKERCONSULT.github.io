@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A GitHub Pages site (`https://rueckerconsult.github.io/`) hosting four classic arcade games as browser games. Pure static HTML — no build system, no dependencies, no framework. A `.nojekyll` file disables Jekyll processing.
+A GitHub Pages site (`https://rueckerconsult.github.io/`) hosting five classic arcade games as browser games. Pure static HTML — no build system, no dependencies, no framework. A `.nojekyll` file disables Jekyll processing.
 
 ## Structure
 
@@ -13,8 +13,9 @@ A GitHub Pages site (`https://rueckerconsult.github.io/`) hosting four classic a
 - `space-invaders/index.html` — Space Invaders (1978): 5×11 formation, destructible pixel shields, UFO, accelerating march
 - `asteroids/index.html` — Asteroids (1979): vector-style ship physics, splitting rocks, saucer
 - `frogger/index.html` — Frogger (1981): lane-based traffic/river, logs and turtles, five home slots, timer
+- `tekken/index.html` — "Iron Fist", a Tekken-style fighter: best-of-3 rounds, punch/kick/block with startup/active/recovery frames, vs-CPU AI or local 2-player
 
-Each game is a single self-contained HTML file: inline CSS and one inline `<script>` rendering to a `<canvas>`. Shared conventions across all four: a `snd()` WebAudio beep helper (audio context lazily created on first input), `requestAnimationFrame` loop with delta-time capped at 50 ms, a `state` string machine (`start` / `play` / `gameover` plus game-specific states), keyboard + touch input, hi-scores in `localStorage` (`<game>-hi` keys), German UI text.
+Each game is a single self-contained HTML file: inline CSS and one inline `<script>` rendering to a `<canvas>`. Shared conventions across all games: a `snd()` WebAudio beep helper (audio context lazily created on first input), `requestAnimationFrame` loop with delta-time capped at 50 ms, a `state` string machine (`start` / `play` / `gameover` plus game-specific states), keyboard + touch input, hi-scores in `localStorage` (`<game>-hi` keys), German UI text.
 
 ## Commands
 
