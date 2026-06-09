@@ -1,6 +1,6 @@
 # 🕹️ Retro Arcade
 
-Sechs Arcade-Spiele als Browser-Games — pures HTML5 Canvas, keine Abhängigkeiten, läuft in jedem modernen Browser (z. B. Google Chrome).
+Sieben Arcade-Spiele als Browser-Games — pures HTML5 Canvas, keine Abhängigkeiten, läuft in jedem modernen Browser (z. B. Google Chrome).
 
 **Live:** https://rueckerconsult.github.io/
 
@@ -12,5 +12,6 @@ Sechs Arcade-Spiele als Browser-Games — pures HTML5 Canvas, keine Abhängigkei
 | 🐸 [Frogger](frogger/) | 1981 | Pfeiltasten / WASD hüpfen |
 | 🥊 [Iron Fist (Tekken-Style)](tekken/) | 1994 | P1: WASD + F/G · P2: Pfeile + K/L |
 | 🔨 [Bonk Arena (Survivors-Style)](bonk/) | à la Megabonk | WASD / virtueller Joystick am Handy |
+| 🔫 [Wave Gunner 3D (Ego-Shooter)](shooter/) | Comic-FPS | WASD + Maus / Twin-Touch am Handy |
 
 Jedes Spiel ist eine einzelne HTML-Datei ohne Build-Schritt. Highscores werden lokal im Browser gespeichert. **P** pausiert, das Lautsprecher-Symbol schaltet den Ton stumm.
