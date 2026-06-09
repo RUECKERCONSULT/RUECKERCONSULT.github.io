@@ -14,7 +14,7 @@
   .bar a { color: #8fa3bf; text-decoration: none; font-size: 14px; letter-spacing: 1px; }
   .bar a:hover { color: #ffe600; }
   h1 { color: #ffe600; font-size: 22px; letter-spacing: 3px; text-shadow: 0 0 12px rgba(255,230,0,.5); }
-  canvas { background: #000; border: 3px solid #2121de; border-radius: 6px; width: min(94vw, 560px); image-rendering: pixelated; touch-action: none; }
+  canvas { background: #000; border: 3px solid #2121de; border-radius: 6px; width: min(94vw, 560px); touch-action: none; }
   .help { color: #6b7894; font-size: 13px; margin-top: 12px; text-align: center; line-height: 1.6; }
   .help b { color: #aab6cc; }
 </style>
@@ -26,8 +26,12 @@
 Friss alle Punkte! Kraftpillen machen Geister kurzzeitig verwundbar.</p>
 <script>
 'use strict';
-const cv = document.getElementById('cv'), cx = cv.getContext('2d');
+const cv = document.getElementById('cv'), cx = cv.getContext('2d', { alpha: false });
 const T = 16, COLS = 28, ROWS = 31, OY = 24; // maze offset y for HUD
+// movement speeds in px/s (entities step whole pixels via an accumulator,
+// so positions stay on the tile-center lattice while speed is framerate-independent)
+const PAC_SPEED = 144, GHOST_SPEED = 132, FRIGHT_SPEED = 90, EYES_SPEED = 300,
+      TUNNEL_SPEED = 72, HOUSE_SPEED = 84;
 const MAZE = [
 "############################",
 "#............##............#",
@@ -147,8 +151,10 @@ function stepPx(e, dir){
 
 // ---------- pacman ----------
 function updatePac(dt){
-  let speed = 2.4 * speedMul();
-  pac.acc += speed;
+  // reversing is allowed any time, not just at tile centers (like the original)
+  if (pac.moving && pac.next.x === -pac.dir.x && pac.next.y === -pac.dir.y)
+    pac.dir = pac.next;
+  pac.acc += PAC_SPEED * speedMul() * dt;
   while (pac.acc >= 1){
     pac.acc -= 1;
     if (atCenter(pac)){
@@ -168,7 +174,7 @@ function updatePac(dt){
       if (walkable(t.c + pac.next.x, t.r + pac.next.y, false)) pac.dir = pac.next;
       pac.moving = walkable(t.c + pac.dir.x, t.r + pac.dir.y, false);
     }
-    if (!pac.moving) break;
+    if (!pac.moving){ pac.acc = 0; break; } // don't bank distance while stopped at a wall
     stepPx(pac, pac.dir);
   }
   pac.mouth += dt * 10;
@@ -194,23 +200,22 @@ function ghostTarget(g){
     }
   }
 }
-function ghostSpeed(g){
-  if (g.state === 'eyes') return 5;
-  if (g.state !== 'out') return 1.4;
+function ghostSpeed(g){ // px/s
+  if (g.state === 'eyes') return EYES_SPEED;
   const t = tileOf(g);
-  if (t.r === 14 && (t.c < 6 || t.c > 21)) return 1.2; // tunnel slowdown
-  if (g.fright) return 1.5;
-  return 2.2 * speedMul();
+  if (t.r === 14 && (t.c < 6 || t.c > 21)) return TUNNEL_SPEED;
+  if (g.fright) return FRIGHT_SPEED;
+  return GHOST_SPEED * speedMul();
 }
-function updateGhost(g){
+function updateGhost(g, dt){
   if (g.state === 'house'){
-    g.rel -= 1/60;
-    g.y += g.bob; if (g.y < 226 || g.y > 238) g.bob = -g.bob;
+    g.rel -= dt;
+    g.y += g.bob * 60 * dt; if (g.y < 226 || g.y > 238) g.bob = -g.bob;
     if (g.rel <= 0){ g.state = 'leaving'; g.y = Math.round(g.y); }
     return;
   }
   if (g.state === 'leaving'){
-    const s = 1.4;
+    const s = HOUSE_SPEED * dt;
     if (Math.abs(g.x - 224) > s) { g.x += g.x > 224 ? -s : s; return; }
     g.x = 224;
     g.y -= s;
@@ -218,14 +223,14 @@ function updateGhost(g){
     return;
   }
   if (g.state === 'entering'){
-    const s = 4;
+    const s = EYES_SPEED * dt;
     if (Math.abs(g.x - 224) > s) { g.x += g.x > 224 ? -s : s; return; }
     g.x = 224;
     if (g.y < 232) { g.y += s; if (g.y >= 232){ g.y = 232; g.fright = false; g.state = 'leaving'; snd(660,.1,'square',.04); } }
     return;
   }
   // out / eyes: tile-centered pathing
-  g.acc += ghostSpeed(g);
+  g.acc += ghostSpeed(g) * dt;
   while (g.acc >= 1){
     g.acc -= 1;
     if (atCenter(g)){
@@ -313,7 +318,7 @@ function update(dt){
   }
   updatePac(dt);
   if (state !== 'play') return;
-  for (const g of ghosts) updateGhost(g);
+  for (const g of ghosts) updateGhost(g, dt);
   checkCollisions();
 }
 
