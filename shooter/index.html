@@ -9,7 +9,12 @@
   body {
     background: #0a0a12; color: #fff; font-family: 'Courier New', monospace;
     display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px;
+    overscroll-behavior: none;
   }
+  #wrap:fullscreen, #wrap:-webkit-full-screen {
+    display: flex; align-items: center; justify-content: center; background: #000;
+  }
+  #wrap:fullscreen canvas { border: none; border-radius: 0; }
   .bar { width: 100%; max-width: 740px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .bar a { color: #8fa3bf; text-decoration: none; font-size: 14px; letter-spacing: 1px; }
   .bar a:hover { color: #ff3355; }
@@ -20,11 +25,11 @@
 </style>
 </head>
 <body>
-<div class="bar"><a href="../">&larr; ARCADE</a><h1>WAVE GUNNER 3D</h1><a href="#" id="muteBtn">&#128266;</a></div>
-<canvas id="cv" width="600" height="400"></canvas>
-<p class="help"><b>WASD</b> laufen &middot; <b>Maus</b> umsehen (Klick = Maus fangen) &middot; <b>Klick/Leertaste</b> feuern &middot; <b>P</b> Pause<br>
-<b>Handy (am besten quer):</b> linker Daumen = laufen &middot; rechts wischen = umsehen &middot; <b>FIRE</b>-Knopf = schießen<br>
-Wellen &middot; Bosse &middot; Truhen &middot; Schreine &middot; 6 Waffen &middot; Nuke, Insta-Kill &amp; mehr!</p>
+<div class="bar"><a href="../">&larr; ARCADE</a><h1>WAVE GUNNER 3D</h1><span><a href="#" id="fsBtn" title="Vollbild">&#x26F6;</a> &nbsp;<a href="#" id="muteBtn">&#128266;</a></span></div>
+<div id="wrap"><canvas id="cv" width="600" height="400"></canvas></div>
+<p class="help"><b>WASD</b> laufen &middot; <b>Maus</b> umsehen (Klick = Maus fangen) &middot; <b>Klick/Leertaste</b> feuern &middot; <b>P</b> Pause &middot; <b>&#x26F6;</b> Vollbild<br>
+<b>Handy (am besten quer):</b> Start öffnet Vollbild &middot; linker Daumen = laufen &middot; rechts wischen = umsehen &middot; <b>FIRE</b> = schießen<br>
+Wellen &middot; Bosse &middot; Truhen &middot; Schreine &middot; Explosive Fässer &middot; 6 Waffen &middot; Nuke, Insta-Kill &amp; mehr!</p>
 <script>
 'use strict';
 const cv = document.getElementById('cv'), cx = cv.getContext('2d', { alpha: false });
@@ -191,10 +196,54 @@ function buildSprites(){
     g.fillStyle = '#66ccff'; g.font = 'bold 26px monospace'; g.textAlign = 'center';
     g.fillText('✦', s/2, s*0.48);
   });
-  SPRITES.gun = makeItemSprite((g, s) => {
-    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#555';
-    g.fillRect(6, s*0.4, s-12, s*0.16); g.strokeRect(6, s*0.4, s-12, s*0.16);
-    g.fillRect(s*0.42, s*0.56, s*0.14, s*0.22); g.strokeRect(s*0.42, s*0.56, s*0.14, s*0.22);
+  // distinct look per weapon
+  SPRITES.w_pistol = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#9aa3ad';
+    g.fillRect(14, 26, 34, 11); g.strokeRect(14, 26, 34, 11);
+    g.fillStyle = '#5b4632'; g.fillRect(18, 36, 11, 16); g.strokeRect(18, 36, 11, 16);
+  });
+  SPRITES.w_smg = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#33363c';
+    g.fillRect(8, 26, 44, 12); g.strokeRect(8, 26, 44, 12);
+    g.fillRect(24, 37, 9, 18); g.strokeRect(24, 37, 9, 18);   // magazine
+    g.fillRect(44, 22, 12, 5); g.strokeRect(44, 22, 12, 5);   // sight
+  });
+  SPRITES.w_shotgun = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#777e88';
+    g.fillRect(4, 26, 44, 6); g.strokeRect(4, 26, 44, 6);     // double barrel
+    g.fillRect(4, 33, 44, 6); g.strokeRect(4, 33, 44, 6);
+    g.fillStyle = '#8b5a2b'; g.beginPath();
+    g.moveTo(46, 24); g.lineTo(60, 30); g.lineTo(60, 46); g.lineTo(46, 41);
+    g.closePath(); g.fill(); g.stroke();                       // wooden stock
+  });
+  SPRITES.w_rifle = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#3f4a36';
+    g.fillRect(2, 28, 52, 9); g.strokeRect(2, 28, 52, 9);
+    g.fillStyle = '#2c3326'; g.fillRect(26, 36, 10, 16); g.strokeRect(26, 36, 10, 16); // mag
+    g.fillRect(46, 36, 14, 8); g.strokeRect(46, 36, 14, 8);   // stock
+    g.fillRect(12, 22, 18, 5); g.strokeRect(12, 22, 18, 5);   // scope
+  });
+  SPRITES.w_laser = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#234a66';
+    g.fillRect(8, 27, 40, 12); g.strokeRect(8, 27, 40, 12);
+    g.fillStyle = '#66ffee'; g.fillRect(2, 29, 8, 8); g.strokeRect(2, 29, 8, 8); // glowing tip
+    g.beginPath(); g.arc(30, 24, 6, 0, 7); g.fill(); g.stroke();                 // energy orb
+    g.fillStyle = '#234a66'; g.fillRect(38, 38, 9, 14); g.strokeRect(38, 38, 9, 14);
+  });
+  SPRITES.w_rocket = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#4a5742';
+    g.fillRect(6, 25, 50, 16); g.strokeRect(6, 25, 50, 16);   // tube
+    g.fillStyle = '#e84545'; g.beginPath();
+    g.moveTo(6, 25); g.lineTo(-2, 33); g.lineTo(6, 41); g.closePath(); g.fill(); g.stroke(); // warhead
+    g.fillStyle = '#2c3326'; g.fillRect(30, 41, 10, 12); g.strokeRect(30, 41, 10, 12);
+  });
+  SPRITES.barrel = makeItemSprite((g, s) => {
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#cc3322';
+    g.beginPath(); g.ellipse(s/2, s*0.55, s*0.28, s*0.38, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#ffcc00';
+    g.fillRect(s*0.24, s*0.48, s*0.52, s*0.12); g.strokeRect(s*0.24, s*0.48, s*0.52, s*0.12);
+    g.fillStyle = '#000'; g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.fillText('!', s/2, s*0.59);
   });
   SPRITES.ball = makeItemSprite((g, s) => {
     g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#7de87d';
@@ -221,17 +270,17 @@ buildSprites();
 // ---------- state ----------
 let state = 'start', paused = false;
 let player, wave, score, combo, comboT, hi = +(localStorage.getItem('shooter-hi')||0);
-let enemies, rockets, spit, pickups, weaponDrops, chests, shrines;
+let enemies, rockets, spit, pickups, weaponDrops, chests, shrines, barrels;
 let parts, floats, marks, banner, bannerT, hitDir, hitDirT, flashT;
 let spawnQueue, spawnT, waveBreakT, fireT, fireFlash, recoil, shake;
-let power, walkCycle = 0;
+let power, walkCycle = 0, heartT = 0, tracerT = 0;
 
 function newGame(){
   player = { x: 12, y: 11.5, dir: 0, pitch: 0, hp: 100, maxHp: 100, speed: 3.1,
              weapon: 'pistol', iframe: 0, dmgMul: 1 };
   wave = 0; score = 0; combo = 0; comboT = 0;
-  enemies = []; rockets = []; spit = []; pickups = []; weaponDrops = []; chests = [];
-  parts = []; floats = []; marks = [];
+  enemies = []; rockets = []; spit = []; pickups = []; weaponDrops = []; chests = []; barrels = [];
+  parts = []; floats = []; marks = []; heartT = 0; tracerT = 0;
   power = { insta: 0, double: 0, rapid: 0, freeze: 0 };
   banner = ''; bannerT = 0; hitDir = 0; hitDirT = 0; flashT = 0;
   spawnQueue = []; spawnT = 0; waveBreakT = 1.2; fireT = 0; fireFlash = 0; recoil = 0; shake = 0;
@@ -272,6 +321,12 @@ function startWave(){
   for (let i = 0; i < nChests; i++){
     const p = freeSpot(3);
     chests.push({ x: p.x, y: p.y, open: 0 });
+  }
+  // explosive barrels
+  while (barrels.length < 7){
+    const p = freeSpot(4);
+    barrels.push({ x: p.x, y: p.y, dead: false });
+    if (barrels.length >= 2 + Math.min(4, wave)) break;
   }
 }
 function randomWeaponId(){
@@ -327,6 +382,7 @@ function fireWeapon(){
     snd(120, .3, 'sawtooth', .07, 60);
     return;
   }
+  tracerT = 0.05;
   if (w.laser) snd(1400, .12, 'sawtooth', .045, 300);
   else snd(200 + Math.random()*80, .07, 'square', .05, 70);
   for (let i = 0; i < w.n; i++){
@@ -345,9 +401,21 @@ function hitscan(a, dmg, pierce){
     const rel = norm(Math.atan2(dy, dx) - a);
     if (Math.abs(rel) < Math.atan(e.rad / d)) targets.push({ e, d });
   }
+  for (const b of barrels){
+    if (b.dead) continue;
+    const dx = b.x - player.x, dy = b.y - player.y;
+    const d = Math.hypot(dx, dy);
+    if (d > wallD + 0.3 || d < 0.05) continue;
+    const rel = norm(Math.atan2(dy, dx) - a);
+    if (Math.abs(rel) < Math.atan(0.3 / d)) targets.push({ b, d });
+  }
   targets.sort((p, q) => p.d - q.d);
-  for (let i = 0; i < Math.min(pierce, targets.length); i++)
-    damageEnemy(targets[i].e, dmg, a);
+  let hits = 0;
+  for (const t of targets){
+    if (hits >= pierce) break;
+    if (t.b){ t.b.dead = true; explode(t.b.x, t.b.y); break; } // barrel stops the shot
+    damageEnemy(t.e, dmg, a); hits++;
+  }
 }
 function damageEnemy(e, dmg, fromAngle){
   const crit = Math.random() < .15;
@@ -370,6 +438,11 @@ function killEnemy(e){
   blood(e.x, e.y, 22, e.scale, true);
   combo++; comboT = 3;
   score += e.score * (1 + Math.floor(combo / 8));
+  const MK = { 5:'MULTI KILL!', 10:'MEGA KILL!', 15:'MONSTER KILL!', 25:'GÖTTLICH!' };
+  if (MK[combo]){
+    banner = MK[combo]; bannerT = 1.6;
+    snd(440 + combo*20, .12, 'square', .07); snd(660 + combo*20, .25, 'square', .07, 990);
+  }
   if (Math.random() < .4)
     addFloat(e.x, e.y, e.scale + .3, WORDS[Math.floor(Math.random()*WORDS.length)], '#ff5566', true);
   noise(.12, .07);
@@ -419,6 +492,9 @@ function explode(x, y){
     if (!e.dead && Math.hypot(e.x-x, e.y-y) < 1.6)
       damageEnemy(e, WEAPONS.rocket.dmg, Math.atan2(e.y-y, e.x-x));
   if (Math.hypot(player.x-x, player.y-y) < 1.2) hurtPlayer(15, x, y);
+  // chain reaction: nearby barrels go off too
+  for (const b of barrels)
+    if (!b.dead && Math.hypot(b.x-x, b.y-y) < 1.5){ b.dead = true; explode(b.x, b.y); }
 }
 function hurtPlayer(dmg, fromX, fromY){
   if (player.iframe > 0 || state !== 'play') return;
@@ -466,7 +542,14 @@ function update(dt){
   if (flashT > 0) flashT -= dt;
   if (fireFlash > 0) fireFlash -= dt;
   if (recoil > 0) recoil = Math.max(0, recoil - dt*6);
+  if (tracerT > 0) tracerT -= dt;
   if (state !== 'play') return;
+
+  // low-hp heartbeat
+  if (player.hp < 30){
+    heartT -= dt;
+    if (heartT <= 0){ snd(58, .14, 'sine', .1); heartT = 0.85; }
+  }
 
   if (player.iframe > 0) player.iframe -= dt;
   for (const k of Object.keys(power)) if (power[k] > 0) power[k] -= dt;
@@ -583,9 +666,12 @@ function update(dt){
     let boom = cellAt(r.x, r.y) > 0;
     if (!boom) for (const e of enemies)
       if (Math.hypot(e.x-r.x, e.y-r.y) < e.rad + 0.2){ boom = true; break; }
+    if (!boom) for (const b of barrels)
+      if (!b.dead && Math.hypot(b.x-r.x, b.y-r.y) < 0.45){ boom = true; break; }
     if (boom){ explode(r.x, r.y); r.dead = true; }
   }
   rockets = rockets.filter(r => !r.dead);
+  barrels = barrels.filter(b => !b.dead);
   enemies = enemies.filter(e => !e.dead);
   if (state !== 'play') return;
 
@@ -667,36 +753,63 @@ function project(wx, wy, z){
 }
 let bobY = 0;
 function horizon(){ return H/2 + bobY; }
+// day -> dusk -> night cycle, two waves each
+function skyTheme(){
+  const t = ((wave - 1) % 6 + 6) % 6;
+  if (t < 2) return { top:'#5aa7e8', bot:'#bfe3ff', sun:'#ffe066', night:false, fTop:'#3c5238', fBot:'#578049', wall:1 };
+  if (t < 4) return { top:'#5a3a7a', bot:'#ff9a66', sun:'#ff8844', night:false, fTop:'#37452f', fBot:'#4d6b3e', wall:.9 };
+  return { top:'#070d24', bot:'#23365e', sun:'#e8e8ff', night:true, fTop:'#222d33', fBot:'#2e4a40', wall:.72 };
+}
 function draw(){
   if (state === 'start'){ drawStartScreen(); return; }
   bobY = Math.sin(walkCycle*2) * 4 + player.pitch + (shake > 0 ? rand(-shake, shake)*0.7 : 0);
   const shx = shake > 0 ? rand(-shake, shake)*0.7 : 0;
   const hor = horizon();
 
-  // sky
+  // sky (theme cycles day/dusk/night with the waves)
+  const TH = skyTheme();
   const sky = cx.createLinearGradient(0, 0, 0, hor);
-  sky.addColorStop(0, '#5aa7e8'); sky.addColorStop(1, '#bfe3ff');
+  sky.addColorStop(0, TH.top); sky.addColorStop(1, TH.bot);
   cx.fillStyle = sky; cx.fillRect(0, 0, W, Math.max(0, hor));
-  // sun + comic clouds (parallax with view direction)
+  // stars at night (parallax with view direction)
+  if (TH.night){
+    cx.fillStyle = '#fff';
+    for (let i = 0; i < 40; i++){
+      const sx2 = (norm(i * 0.37 - player.dir) / FOV + 0.5) * W;
+      if (sx2 < -5 || sx2 > W+5) continue;
+      const sy = hor - 40 - (i * 29 % 150);
+      if (sy < 0 || sy > hor) continue;
+      const tw = (i*7 + (performance.now()/300|0)) % 9 ? 1.6 : 2.6; // twinkle
+      cx.fillRect(sx2 + shx, sy, tw, tw);
+    }
+  }
+  // sun / moon
   const sunX = (norm(0.9 - player.dir) / FOV + 0.5) * W;
   if (sunX > -60 && sunX < W+60){
-    cx.fillStyle = '#ffe066'; cx.strokeStyle = '#000'; cx.lineWidth = 3;
-    cx.beginPath(); cx.arc(sunX + shx, hor*0.3, 30, 0, 7); cx.fill(); cx.stroke();
+    cx.fillStyle = TH.sun; cx.strokeStyle = '#000'; cx.lineWidth = 3;
+    cx.beginPath(); cx.arc(sunX + shx, hor*0.3, TH.night ? 22 : 30, 0, 7); cx.fill(); cx.stroke();
+    if (TH.night){ // moon crater
+      cx.fillStyle = 'rgba(120,120,160,.5)';
+      cx.beginPath(); cx.arc(sunX + shx - 6, hor*0.3 - 4, 6, 0, 7); cx.arc(sunX + shx + 7, hor*0.3 + 6, 4, 0, 7); cx.fill();
+    }
   }
-  cx.fillStyle = '#fff'; cx.strokeStyle = '#000'; cx.lineWidth = 3;
-  for (let i = 0; i < 5; i++){
-    const ca = i * 1.25 + 0.3;
-    const cxs = (norm(ca - player.dir) / FOV + 0.5) * W;
-    if (cxs < -80 || cxs > W+80) continue;
-    const cy = hor - 170 + (i%3)*28;
-    cx.beginPath();
-    cx.ellipse(cxs + shx, cy, 34, 13, 0, 0, 7);
-    cx.ellipse(cxs + 22 + shx, cy - 8, 22, 11, 0, 0, 7);
-    cx.fill();
+  // comic clouds (not at night)
+  if (!TH.night){
+    cx.fillStyle = '#fff'; cx.strokeStyle = '#000'; cx.lineWidth = 3;
+    for (let i = 0; i < 5; i++){
+      const ca = i * 1.25 + 0.3;
+      const cxs = (norm(ca - player.dir) / FOV + 0.5) * W;
+      if (cxs < -80 || cxs > W+80) continue;
+      const cy = hor - 170 + (i%3)*28;
+      cx.beginPath();
+      cx.ellipse(cxs + shx, cy, 34, 13, 0, 0, 7);
+      cx.ellipse(cxs + 22 + shx, cy - 8, 22, 11, 0, 0, 7);
+      cx.fill();
+    }
   }
   // floor
   const flr = cx.createLinearGradient(0, hor, 0, H);
-  flr.addColorStop(0, '#3c5238'); flr.addColorStop(1, '#578049');
+  flr.addColorStop(0, TH.fTop); flr.addColorStop(1, TH.fBot);
   cx.fillStyle = flr; cx.fillRect(0, Math.max(0, hor), W, H - hor);
 
   // walls
@@ -712,7 +825,7 @@ function draw(){
     const lh = H3D / pd;
     const y0 = hor - lh/2;
     const col = WALL_COLORS[r.type] || WALL_COLORS[1];
-    let br = Math.min(1, 1.25 / (1 + pd*pd*0.018));
+    let br = Math.min(1, 1.25 / (1 + pd*pd*0.018)) * TH.wall;
     if (r.side === 1) br *= 0.72;
     br *= 0.86 + 0.14 * (((r.wallX*6)|0) % 2); // cheap texture stripes
     cx.fillStyle = 'rgb(' + (col[0]*br|0) + ',' + (col[1]*br|0) + ',' + (col[2]*br|0) + ')';
@@ -727,7 +840,8 @@ function draw(){
   for (const c of chests) spritesToDraw.push({ wx: c.x, wy: c.y, img: SPRITES.chest, sc: .5 - Math.min(.2, c.open*.05) });
   for (const s of shrines) spritesToDraw.push({ wx: s.x, wy: s.y, img: SPRITES.shrine, sc: .95, shrine: s });
   for (const p of pickups) if (p.t > 3 || Math.floor(performance.now()/150)%2) spritesToDraw.push({ wx: p.x, wy: p.y, img: SPRITES['drop_'+p.id], sc: .34, bob: true });
-  for (const wd of weaponDrops) if (wd.t > 3 || Math.floor(performance.now()/150)%2) spritesToDraw.push({ wx: wd.x, wy: wd.y, img: SPRITES.gun, sc: .4, bob: true });
+  for (const wd of weaponDrops) if (wd.t > 3 || Math.floor(performance.now()/150)%2) spritesToDraw.push({ wx: wd.x, wy: wd.y, img: SPRITES['w_' + wd.id], sc: .42, bob: true });
+  for (const b of barrels) spritesToDraw.push({ wx: b.x, wy: b.y, img: SPRITES.barrel, sc: .52 });
   for (const r of rockets) spritesToDraw.push({ wx: r.x, wy: r.y, img: SPRITES.rocketSpr, sc: .22, fly: .35 });
   for (const s of spit) spritesToDraw.push({ wx: s.x, wy: s.y, img: SPRITES.ball, sc: .16, fly: .3 });
   const projected = [];
@@ -808,6 +922,20 @@ function draw(){
     cx.fillRect(0, 0, W, H);
   }
 
+  // tracer line from muzzle toward the crosshair
+  if (tracerT > 0){
+    cx.strokeStyle = 'rgba(255,230,120,' + (tracerT*14) + ')'; cx.lineWidth = 2;
+    cx.beginPath();
+    cx.moveTo(W/2 + 86 + Math.sin(walkCycle)*8, H - 66);
+    cx.lineTo(W/2, H/2 + 4);
+    cx.stroke();
+  }
+  // low-hp pulse
+  if (state === 'play' && player.hp < 30){
+    const a = 0.12 + 0.08 * Math.sin(performance.now()/130);
+    cx.strokeStyle = 'rgba(255,0,0,' + a + ')'; cx.lineWidth = 26;
+    cx.strokeRect(0, 0, W, H);
+  }
   drawViewmodel();
   drawCrosshair();
   drawHud();
@@ -906,8 +1034,9 @@ function drawHud(){
   cx.strokeStyle = '#fff'; cx.lineWidth = 1.5; cx.strokeRect(12, H-26, 130, 14);
   cx.fillStyle = '#fff'; cx.font = 'bold 11px "Courier New", monospace'; cx.textAlign = 'left';
   cx.fillText(Math.max(0, Math.ceil(player.hp)), 146, H-15);
-  // weapon + wave
-  cx.fillText(WEAPONS[player.weapon].name + '  ·  WELLE ' + wave, 12, H-36);
+  // weapon icon + name + wave
+  cx.drawImage(SPRITES['w_' + player.weapon], 8, H-66, 28, 28);
+  cx.fillText(WEAPONS[player.weapon].name + '  ·  WELLE ' + wave, 40, H-44);
   // score
   cx.textAlign = 'right'; cx.font = 'bold 14px "Courier New", monospace';
   cx.strokeStyle = '#000'; cx.lineWidth = 3;
@@ -956,6 +1085,8 @@ function drawMinimap(){
   for (const e of enemies) cx.fillRect(mx + e.x*ms - 1, my + e.y*ms - 1, e.type==='boss'?4:2, e.type==='boss'?4:2);
   cx.fillStyle = '#fd0';
   for (const c of chests) if (!c.open) cx.fillRect(mx + c.x*ms - 1, my + c.y*ms - 1, 3, 3);
+  cx.fillStyle = '#f80';
+  for (const b of barrels) cx.fillRect(mx + b.x*ms - 1, my + b.y*ms - 1, 3, 3);
   cx.fillStyle = '#6cf';
   for (const s of shrines) if (wave >= s.readyWave) cx.fillRect(mx + s.x*ms - 1, my + s.y*ms - 1, 3, 3);
   // player
@@ -1016,6 +1147,32 @@ function drawStartScreen(){
   cx.fillText('TASTE DRÜCKEN / TIPPEN ZUM START', W/2, 360);
 }
 
+// ---------- fullscreen ----------
+const wrap = document.getElementById('wrap');
+function fitCanvas(){
+  if (document.fullscreenElement === wrap){
+    const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+    cv.style.width = (W*s) + 'px'; cv.style.height = (H*s) + 'px';
+  } else {
+    cv.style.width = ''; cv.style.height = '';
+  }
+}
+function enterFs(){
+  if (wrap && wrap.requestFullscreen && !document.fullscreenElement){
+    wrap.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+      try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+      fitCanvas();
+    }).catch(()=>{});
+  }
+}
+document.getElementById('fsBtn').addEventListener('click', e => {
+  e.preventDefault();
+  if (document.fullscreenElement){ if (document.exitFullscreen) document.exitFullscreen(); }
+  else enterFs();
+});
+document.addEventListener('fullscreenchange', fitCanvas);
+if (typeof window.addEventListener === 'function') window.addEventListener('resize', fitCanvas);
+
 // ---------- input ----------
 let hasTouch = false;
 function canvasPos(clientX, clientY){
@@ -1062,7 +1219,7 @@ document.addEventListener('mousemove', e => {
 // touch: left half move stick, right half look-drag, FIRE button
 cv.addEventListener('touchstart', e => {
   e.preventDefault(); initAudio(); hasTouch = true;
-  if (state === 'start' || state === 'gameover'){ newGame(); return; }
+  if (state === 'start' || state === 'gameover'){ newGame(); enterFs(); return; }
   for (const t of e.changedTouches){
     const p = canvasPos(t.clientX, t.clientY);
     if (Math.hypot(p.x - (W-46), p.y - (H-46)) < 44 && !fireBtn.active){
