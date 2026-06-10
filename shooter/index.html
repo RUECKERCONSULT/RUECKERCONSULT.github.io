@@ -227,7 +227,7 @@ let spawnQueue, spawnT, waveBreakT, fireT, fireFlash, recoil, shake;
 let power, walkCycle = 0;
 
 function newGame(){
-  player = { x: 12, y: 11.5, dir: 0, hp: 100, maxHp: 100, speed: 3.1,
+  player = { x: 12, y: 11.5, dir: 0, pitch: 0, hp: 100, maxHp: 100, speed: 3.1,
              weapon: 'pistol', iframe: 0, dmgMul: 1 };
   wave = 0; score = 0; combo = 0; comboT = 0;
   enemies = []; rockets = []; spit = []; pickups = []; weaponDrops = []; chests = [];
@@ -439,7 +439,7 @@ function hurtPlayer(dmg, fromX, fromY){
 const keys = {};
 const mouse = { down: false };
 const stickL = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
-const lookT = { active: false, id: null, lx: 0 };
+const lookT = { active: false, id: null, lx: 0, ly: 0 };
 const fireBtn = { active: false, id: null };
 let last = 0;
 function loop(ts){
@@ -669,7 +669,7 @@ let bobY = 0;
 function horizon(){ return H/2 + bobY; }
 function draw(){
   if (state === 'start'){ drawStartScreen(); return; }
-  bobY = Math.sin(walkCycle*2) * 4 + (shake > 0 ? rand(-shake, shake)*0.7 : 0);
+  bobY = Math.sin(walkCycle*2) * 4 + player.pitch + (shake > 0 ? rand(-shake, shake)*0.7 : 0);
   const shx = shake > 0 ? rand(-shake, shake)*0.7 : 0;
   const hor = horizon();
 
@@ -688,7 +688,7 @@ function draw(){
     const ca = i * 1.25 + 0.3;
     const cxs = (norm(ca - player.dir) / FOV + 0.5) * W;
     if (cxs < -80 || cxs > W+80) continue;
-    const cy = 30 + (i%3)*26;
+    const cy = hor - 170 + (i%3)*28;
     cx.beginPath();
     cx.ellipse(cxs + shx, cy, 34, 13, 0, 0, 7);
     cx.ellipse(cxs + 22 + shx, cy - 8, 22, 11, 0, 0, 7);
@@ -1054,8 +1054,10 @@ cv.addEventListener('mousedown', e => {
 });
 document.addEventListener('mouseup', () => mouse.down = false);
 document.addEventListener('mousemove', e => {
-  if (document.pointerLockElement === cv && state === 'play')
+  if (document.pointerLockElement === cv && state === 'play'){
     player.dir += (e.movementX || 0) * 0.0032;
+    player.pitch = Math.max(-130, Math.min(130, player.pitch - (e.movementY || 0) * 0.45));
+  }
 });
 // touch: left half move stick, right half look-drag, FIRE button
 cv.addEventListener('touchstart', e => {
@@ -1070,7 +1072,7 @@ cv.addEventListener('touchstart', e => {
       stickL.active = true; stickL.id = t.identifier;
       stickL.sx = p.x; stickL.sy = p.y; stickL.dx = 0; stickL.dy = 0;
     } else if (!lookT.active){
-      lookT.active = true; lookT.id = t.identifier; lookT.lx = p.x;
+      lookT.active = true; lookT.id = t.identifier; lookT.lx = p.x; lookT.ly = p.y;
     }
   }
 }, {passive:false});
@@ -1085,7 +1087,8 @@ cv.addEventListener('touchmove', e => {
       stickL.dx = dx; stickL.dy = dy;
     } else if (lookT.active && lookT.id === t.identifier){
       player.dir += (p.x - lookT.lx) * 0.008;
-      lookT.lx = p.x;
+      player.pitch = Math.max(-130, Math.min(130, player.pitch - (p.y - lookT.ly) * 1.1));
+      lookT.lx = p.x; lookT.ly = p.y;
     }
   }
 }, {passive:false});
