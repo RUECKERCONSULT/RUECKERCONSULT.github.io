@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Wave Gunner 3D – Ego-Shooter – Retro Arcade</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,10 +11,24 @@
     display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px;
     overscroll-behavior: none;
   }
+  #wrap { position: relative; }
   #wrap:fullscreen, #wrap:-webkit-full-screen {
     display: flex; align-items: center; justify-content: center; background: #000;
   }
   #wrap:fullscreen canvas { border: none; border-radius: 0; }
+  /* pseudo fullscreen for iOS Safari (no element Fullscreen API there) */
+  #wrap.pseudofs {
+    position: fixed; inset: 0; z-index: 60; background: #000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #wrap.pseudofs canvas { border: none; border-radius: 0; max-height: none; }
+  body.noscroll { overflow: hidden; }
+  #fsExit {
+    display: none; position: absolute; top: 8px; right: 10px; z-index: 70;
+    color: rgba(255,255,255,.75); text-decoration: none; font-size: 26px;
+    line-height: 1; padding: 6px 10px; background: rgba(0,0,0,.35); border-radius: 8px;
+  }
+  #wrap.pseudofs #fsExit, #wrap:fullscreen #fsExit { display: block; }
   .bar { width: 100%; max-width: 740px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .bar a { color: #8fa3bf; text-decoration: none; font-size: 14px; letter-spacing: 1px; }
   .bar a:hover { color: #ff3355; }
@@ -26,7 +40,7 @@
 </head>
 <body>
 <div class="bar"><a href="../">&larr; ARCADE</a><h1>WAVE GUNNER 3D</h1><span><a href="#" id="fsBtn" title="Vollbild">&#x26F6;</a> &nbsp;<a href="#" id="muteBtn">&#128266;</a></span></div>
-<div id="wrap"><canvas id="cv" width="600" height="400"></canvas></div>
+<div id="wrap"><canvas id="cv" width="600" height="400"></canvas><a href="#" id="fsExit">&#10005;</a></div>
 <p class="help"><b>WASD</b> laufen &middot; <b>Maus</b> umsehen (Klick = Maus fangen) &middot; <b>Klick/Leertaste</b> feuern &middot; <b>P</b> Pause &middot; <b>&#x26F6;</b> Vollbild<br>
 <b>Handy (am besten quer):</b> Start öffnet Vollbild &middot; linker Daumen = laufen &middot; rechts wischen = umsehen &middot; <b>FIRE</b> = schießen<br>
 Wellen &middot; Bosse &middot; Truhen &middot; Schreine &middot; Explosive Fässer &middot; 6 Waffen &middot; Nuke, Insta-Kill &amp; mehr!</p>
@@ -236,9 +250,9 @@ function buildSprites(){
     g.closePath(); g.fill(); g.stroke();                       // wooden stock
   });
   SPRITES.w_rifle = makeItemSprite((g, s) => {
-    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#3f4a36';
+    g.lineWidth = 4; g.strokeStyle = '#000'; g.fillStyle = '#e3b54a';
     g.fillRect(2, 28, 52, 9); g.strokeRect(2, 28, 52, 9);
-    g.fillStyle = '#2c3326'; g.fillRect(26, 36, 10, 16); g.strokeRect(26, 36, 10, 16); // mag
+    g.fillStyle = '#23252b'; g.fillRect(26, 36, 10, 16); g.strokeRect(26, 36, 10, 16); // mag
     g.fillRect(46, 36, 14, 8); g.strokeRect(46, 36, 14, 8);   // stock
     g.fillRect(12, 22, 18, 5); g.strokeRect(12, 22, 18, 5);   // scope
   });
@@ -976,7 +990,7 @@ function draw(){
   if (tracerT > 0){
     cx.strokeStyle = 'rgba(255,230,120,' + (tracerT*14) + ')'; cx.lineWidth = 2;
     cx.beginPath();
-    cx.moveTo(W/2 + 86 + Math.sin(walkCycle)*8, H - 66);
+    cx.moveTo(W/2 + 14 + Math.sin(walkCycle)*7, H - 86);
     cx.lineTo(W/2, H/2 + 4);
     cx.stroke();
   }
@@ -1017,61 +1031,196 @@ function draw(){
     cx.fillText('PAUSE', W/2, 120);
   }
 }
+function vmPart(x, y, w, h, fill, r){
+  cx.fillStyle = fill;
+  cx.beginPath(); cx.roundRect(x, y, w, h, r === undefined ? 2 : r);
+  cx.fill(); cx.stroke();
+}
+function vmShine(x, w2, y){ // top highlight strip for that low-poly sheen
+  cx.fillStyle = 'rgba(255,255,255,.25)';
+  cx.fillRect(x, y, w2, 3);
+}
+function vmGrip(x, y, color, len){
+  cx.save(); cx.translate(x, y); cx.rotate(0.32);
+  vmPart(-7, 0, 15, len || 27, color, 4);
+  cx.fillStyle = 'rgba(0,0,0,.25)';
+  for (let i = 0; i < 3; i++) cx.fillRect(-4, 6 + i*6, 9, 2);
+  cx.restore();
+}
+function vmMag(x, color){ // curved magazine
+  cx.fillStyle = color;
+  cx.beginPath();
+  cx.moveTo(x, 10); cx.quadraticCurveTo(x - 2, 32, x + 10, 48);
+  cx.lineTo(x + 24, 43); cx.quadraticCurveTo(x + 14, 30, x + 16, 10);
+  cx.closePath(); cx.fill(); cx.stroke();
+  cx.fillStyle = 'rgba(255,255,255,.13)';
+  cx.fillRect(x + 4, 16, 12, 3); cx.fillRect(x + 5, 26, 12, 3);
+}
+function vmFlash(x, y){ // 8-point comic muzzle star
+  if (fireFlash <= 0) return;
+  const k = Math.max(0, fireFlash / 0.07);
+  cx.fillStyle = 'rgba(255,235,140,' + (0.6 + 0.4*k) + ')';
+  cx.beginPath();
+  for (let i = 0; i < 8; i++){
+    const a = i * Math.PI/4 + 0.39;
+    const r = (i % 2 ? 7 : 19 + 9*k);
+    cx.lineTo(x + Math.cos(a)*r, y + Math.sin(a)*r*0.85);
+  }
+  cx.closePath(); cx.fill(); cx.stroke();
+  cx.fillStyle = '#fff';
+  cx.beginPath(); cx.arc(x, y, 5, 0, 7); cx.fill();
+}
 function drawViewmodel(){
-  const w = WEAPONS[player.weapon];
-  const bx = W/2 + 70 + Math.sin(walkCycle)*8, by = H - 60 + Math.abs(Math.cos(walkCycle))*6 + recoil*16;
+  const bx = W/2 + 128 + Math.sin(walkCycle)*7;
+  const by = H - 52 + Math.abs(Math.cos(walkCycle))*5 + recoil*16;
   cx.save();
   cx.translate(bx, by);
-  cx.strokeStyle = '#000'; cx.lineWidth = 4;
-  // trigger arm: sleeve reaching up from the bottom edge to the grip
-  cx.fillStyle = '#2c6e63';
-  cx.beginPath();
-  cx.moveTo(2, 26); cx.lineTo(34, 90); cx.lineTo(74, 90); cx.lineTo(26, 20);
-  cx.closePath(); cx.fill(); cx.stroke();
-  // trigger hand
-  cx.fillStyle = '#ffd9a3';
-  cx.beginPath(); cx.arc(14, 30, 14, 0, 7); cx.fill(); cx.stroke();
-  // support arm + hand on the foregrip (long guns)
-  if (player.weapon !== 'pistol'){
-    cx.fillStyle = '#2c6e63';
+  cx.scale(-1, 1);                  // art points +x, on screen the barrel aims at the crosshair
+  cx.rotate(-0.13 - recoil*0.07);   // slight up-tilt + kick
+  cx.strokeStyle = '#000'; cx.lineWidth = 3; cx.lineJoin = 'round'; cx.lineCap = 'round';
+  const SKIN = '#ffd9a3', SLEEVE = '#2c6e63';
+  // arms + hands (drawn first, the gun rests on top)
+  function arm(hx, hy){
+    cx.fillStyle = SLEEVE;
     cx.beginPath();
-    cx.moveTo(40, 18); cx.lineTo(86, 92); cx.lineTo(120, 92); cx.lineTo(58, 10);
+    cx.moveTo(hx - 12, hy + 2); cx.lineTo(hx - 52, hy + 80); cx.lineTo(hx - 12, hy + 92); cx.lineTo(hx + 13, hy + 7);
     cx.closePath(); cx.fill(); cx.stroke();
-    cx.fillStyle = '#ffd9a3';
-    cx.beginPath(); cx.arc(44, 12, 12, 0, 7); cx.fill(); cx.stroke();
+    cx.fillStyle = SKIN;
+    cx.beginPath(); cx.arc(hx, hy, 11, 0, 7); cx.fill(); cx.stroke();
   }
-  // gun body per weapon
-  cx.fillStyle = '#3d3d44';
-  if (player.weapon === 'shotgun'){
-    cx.fillRect(-18, -4, 70, 18); cx.strokeRect(-18, -4, 70, 18);
-    cx.fillStyle = '#7a4a22'; cx.fillRect(8, 14, 30, 12); cx.strokeRect(8, 14, 30, 12);
-  } else if (player.weapon === 'rocket'){
-    cx.fillStyle = '#4a5742'; cx.fillRect(-26, -16, 86, 30); cx.strokeRect(-26, -16, 86, 30);
-    cx.fillStyle = '#222'; cx.beginPath(); cx.arc(60, -1, 14, 0, 7); cx.fill(); cx.stroke();
-  } else if (player.weapon === 'laser'){
-    cx.fillStyle = '#235'; cx.fillRect(-14, -6, 66, 16); cx.strokeRect(-14, -6, 66, 16);
-    cx.fillStyle = '#6ff'; cx.fillRect(46, -2, 12, 8); cx.strokeRect(46, -2, 12, 8);
-  } else if (player.weapon === 'smg'){
-    cx.fillRect(-10, -2, 52, 14); cx.strokeRect(-10, -2, 52, 14);
-    cx.fillRect(6, 12, 10, 18); cx.strokeRect(6, 12, 10, 18);
-  } else if (player.weapon === 'rifle'){
-    cx.fillStyle = '#e8c06a'; // golden rifle
-    cx.fillRect(-22, -3, 78, 13); cx.strokeRect(-22, -3, 78, 13);
-    cx.fillStyle = '#2b2f38';
-    cx.fillRect(10, 10, 12, 20); cx.strokeRect(10, 10, 12, 20); // magazine
-    cx.fillRect(20, -10, 22, 8); cx.strokeRect(20, -10, 22, 8); // sight
-    cx.fillStyle = '#e8c06a'; cx.fillRect(-22, 8, 24, 10); cx.strokeRect(-22, 8, 24, 10);
-  } else {
-    cx.fillRect(-2, 0, 44, 13); cx.strokeRect(-2, 0, 44, 13);
-    cx.fillRect(2, 12, 12, 16); cx.strokeRect(2, 12, 12, 16);
-  }
-  // muzzle flash
-  if (fireFlash > 0){
-    cx.fillStyle = '#ffe066';
-    const mx = player.weapon === 'rocket' ? 76 : 52;
-    cx.beginPath();
-    cx.moveTo(mx, 4); cx.lineTo(mx+26, -10); cx.lineTo(mx+18, 4); cx.lineTo(mx+26, 16);
-    cx.closePath(); cx.fill(); cx.stroke();
+  arm(8, 24);
+  if (player.weapon !== 'pistol') arm(62, 12);
+
+  switch (player.weapon){
+    case 'pistol': {
+      vmPart(-4, 5, 50, 11, '#3a3d44', 3);                 // frame
+      vmGrip(4, 14, '#6b4a2b');
+      vmPart(-8, -9, 62, 15, '#c9ced6', 3);                // slide
+      cx.fillStyle = '#9aa0a8';                             // serrations
+      for (let i = 0; i < 5; i++) cx.fillRect(-4 + i*5, -7, 2.5, 11);
+      vmPart(28, -7, 14, 7, '#7d838c', 1);                  // ejection port
+      vmPart(54, -6, 9, 8, '#23252b', 1);                   // barrel tip
+      vmPart(-7, -13, 5, 4, '#23252b', 1);                  // rear sight
+      vmPart(50, -13, 4, 4, '#23252b', 1);                  // front sight
+      vmPart(-13, -8, 6, 7, '#23252b', 1);                  // hammer
+      vmShine(-8, 62, -8);
+      vmFlash(68, -2);
+      break;
+    }
+    case 'smg': {
+      vmPart(-44, -5, 26, 11, '#23252b', 2);                // folding stock
+      vmGrip(2, 9, '#23252b');
+      vmMag(22, '#1f2126');
+      vmPart(-20, -10, 92, 19, '#2b2e35', 4);               // receiver
+      vmPart(46, -8, 26, 16, '#34373f', 4);                 // handguard
+      vmPart(72, -5, 22, 7, '#17191e', 1);                  // barrel
+      vmPart(92, -7, 7, 11, '#23252b', 1);                  // muzzle
+      vmPart(-12, -16, 7, 6, '#23252b', 1);                 // rear sight
+      cx.strokeStyle = '#23252b'; cx.lineWidth = 4;          // front sight ring
+      cx.beginPath(); cx.arc(64, -13, 5, 0, 7); cx.stroke();
+      cx.strokeStyle = '#000'; cx.lineWidth = 3;
+      vmShine(-20, 90, -9);
+      vmFlash(102, -2);
+      break;
+    }
+    case 'shotgun': {
+      cx.fillStyle = '#7a4a22';                              // wooden stock
+      cx.beginPath();
+      cx.moveTo(-22, -8); cx.lineTo(-54, 3); cx.lineTo(-54, 19); cx.lineTo(-20, 12);
+      cx.closePath(); cx.fill(); cx.stroke();
+      vmPart(-24, -10, 42, 20, '#33363c', 3);                // receiver
+      vmPart(16, -9, 102, 8, '#5a5f68', 2);                  // barrel
+      vmPart(16, 0, 88, 7, '#494e57', 2);                    // mag tube
+      vmPart(40, -1, 34, 14, '#8b5a2b', 4);                  // wooden pump
+      cx.fillStyle = 'rgba(0,0,0,.3)';
+      for (let i = 0; i < 5; i++) cx.fillRect(44 + i*6, 1, 2.5, 10);
+      vmPart(2, -7, 12, 8, '#23252b', 1);                    // ejection port
+      cx.fillStyle = '#ffcc00';                              // bead sight
+      cx.beginPath(); cx.arc(114, -11, 3, 0, 7); cx.fill(); cx.stroke();
+      vmShine(16, 100, -8);
+      vmFlash(122, -4);
+      break;
+    }
+    case 'rifle': {  // the golden one
+      vmPart(-58, -8, 13, 22, '#23252b', 2);                 // buttpad
+      vmPart(-46, -10, 26, 22, '#e3b54a', 3);                // stock
+      vmPart(-44, -16, 20, 7, '#caa23e', 2);                 // cheek riser
+      vmGrip(8, 11, '#23252b');
+      vmMag(28, '#2b2e35');
+      vmPart(-22, -11, 112, 13, '#e3b54a', 3);               // upper receiver
+      vmPart(-22, 1, 104, 10, '#caa23e', 3);                 // lower receiver
+      cx.fillStyle = '#b8923a';                               // handguard slots
+      for (let i = 0; i < 4; i++) cx.fillRect(36 + i*12, -7, 6, 6);
+      vmPart(2, -8, 16, 8, '#b8923a', 1);                    // ejection port
+      vmPart(-18, -15, 10, 4, '#23252b', 1);                 // charging handle
+      vmPart(90, -7, 24, 8, '#23252b', 1);                   // barrel
+      vmPart(112, -9, 11, 12, '#17191e', 2);                 // muzzle brake
+      cx.fillStyle = '#000';
+      cx.fillRect(114, -6, 2, 6); cx.fillRect(118, -6, 2, 6);
+      vmPart(-14, -16, 76, 6, '#2b2e35', 1);                 // top rail
+      cx.fillStyle = '#17191e';
+      for (let i = 0; i < 8; i++) cx.fillRect(-10 + i*9, -15, 4, 4);
+      vmPart(16, -18, 10, 4, '#1c1e24', 1);                  // sight mount
+      vmPart(8, -31, 30, 15, '#1c1e24', 3);                  // red-dot sight
+      cx.fillStyle = '#66ffee';                               // lens
+      cx.beginPath(); cx.arc(33, -23, 5, 0, 7); cx.fill(); cx.stroke();
+      cx.fillStyle = '#ff4040'; cx.fillRect(31, -25, 4, 4);   // red dot
+      vmShine(-22, 110, -10);
+      vmFlash(128, -3);
+      break;
+    }
+    case 'laser': {
+      cx.fillStyle = '#1c2e3a';                               // rear fin
+      cx.beginPath(); cx.moveTo(-28, -9); cx.lineTo(-44, -22); cx.lineTo(-22, -13);
+      cx.closePath(); cx.fill(); cx.stroke();
+      vmGrip(2, 10, '#1c2e3a');
+      vmPart(-32, -10, 104, 20, '#27404f', 8);                // body
+      vmPart(-32, 3, 104, 7, '#1c2e3a', 5);                   // belly
+      cx.fillStyle = '#0f1c26';                               // vents
+      for (let i = 0; i < 3; i++) cx.fillRect(-22 + i*9, -7, 5, 13);
+      const pulse = .6 + .4*Math.sin(performance.now()/120);
+      cx.fillStyle = 'rgba(102,255,238,' + pulse + ')';       // energy core
+      cx.beginPath(); cx.arc(28, 0, 8, 0, 7); cx.fill(); cx.stroke();
+      cx.strokeStyle = 'rgba(102,255,238,.8)'; cx.lineWidth = 2;
+      cx.beginPath(); cx.arc(28, 0, 12, 0, 7); cx.stroke();
+      cx.strokeStyle = '#000'; cx.lineWidth = 3;
+      vmPart(72, -10, 34, 6, '#37536b', 2);                   // twin prongs
+      vmPart(72, 4, 34, 6, '#37536b', 2);
+      cx.fillStyle = 'rgba(102,255,238,' + (0.25 + pulse*.3) + ')';
+      cx.fillRect(74, -3, 30, 6);                              // charge glow
+      vmPart(104, -5, 8, 11, '#66ffee', 2);                   // emitter
+      if (fireFlash > 0){                                      // beam!
+        cx.fillStyle = 'rgba(102,255,238,' + (fireFlash*10) + ')';
+        cx.fillRect(112, -3, 320, 6);
+        cx.fillStyle = 'rgba(255,255,255,' + (fireFlash*8) + ')';
+        cx.fillRect(112, -1, 320, 2);
+      }
+      vmShine(-30, 100, -9);
+      break;
+    }
+    case 'rocket': {
+      cx.fillStyle = '#23252b';                                // exhaust bell
+      cx.beginPath(); cx.moveTo(-44, -12); cx.lineTo(-58, -19); cx.lineTo(-58, 17); cx.lineTo(-44, 10);
+      cx.closePath(); cx.fill(); cx.stroke();
+      vmGrip(-2, 13, '#23252b', 25);
+      vmGrip(42, 13, '#23252b', 20);
+      vmPart(-44, -15, 150, 28, '#4a5742', 9);                 // tube
+      vmPart(-44, -15, 14, 28, '#39443a', 6);                  // bands
+      vmPart(92, -15, 14, 28, '#39443a', 6);
+      for (let i = 0; i < 4; i++){                              // hazard ring
+        cx.fillStyle = i % 2 ? '#15151a' : '#e8b800';
+        cx.fillRect(70 + i*5, -13, 5, 24);
+      }
+      cx.strokeRect(70, -13, 20, 24);
+      cx.fillStyle = '#d23b2f';                                 // warhead
+      cx.beginPath(); cx.moveTo(106, -13); cx.quadraticCurveTo(134, -10, 138, -1);
+      cx.quadraticCurveTo(134, 8, 106, 11); cx.closePath(); cx.fill(); cx.stroke();
+      vmPart(18, -20, 6, 6, '#23252b', 1);                     // sight mount
+      vmPart(10, -33, 24, 15, '#23252b', 2);                   // sight
+      cx.fillStyle = '#66ffee'; cx.fillRect(14, -29, 9, 7); cx.strokeRect(14, -29, 9, 7);
+      vmShine(-40, 140, -13);
+      break;
+    }
   }
   cx.restore();
 }
@@ -1215,31 +1364,57 @@ function drawStartScreen(){
   cx.fillText('TASTE DRÜCKEN / TIPPEN ZUM START', W/2, 360);
 }
 
-// ---------- fullscreen ----------
+// ---------- fullscreen (with pseudo-fullscreen fallback for iOS Safari) ----------
 const wrap = document.getElementById('wrap');
+let pseudoFs = false;
+function nativeFsEl(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function inFs(){ return pseudoFs || nativeFsEl() === wrap; }
 function fitCanvas(){
-  if (document.fullscreenElement === wrap){
+  if (inFs()){
     const s = Math.min(window.innerWidth / W, window.innerHeight / H);
     cv.style.width = (W*s) + 'px'; cv.style.height = (H*s) + 'px';
   } else {
     cv.style.width = ''; cv.style.height = '';
   }
 }
+function setPseudo(on){
+  pseudoFs = on;
+  if (wrap.classList) wrap.classList.toggle('pseudofs', on);
+  if (document.body && document.body.classList) document.body.classList.toggle('noscroll', on);
+  fitCanvas();
+}
 function enterFs(){
-  if (wrap && wrap.requestFullscreen && !document.fullscreenElement){
-    wrap.requestFullscreen({ navigationUI: 'hide' }).then(() => {
-      try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
-      fitCanvas();
-    }).catch(()=>{});
+  if (inFs()) return;
+  const rfs = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+  if (rfs){
+    try {
+      const p = rfs.call(wrap);
+      if (p && p.catch) p.catch(() => setPseudo(true));
+    } catch(e){ setPseudo(true); }
+  } else {
+    setPseudo(true); // iOS Safari has no element Fullscreen API
   }
+  try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+}
+function exitFs(){
+  if (nativeFsEl()){
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+  setPseudo(false);
 }
 document.getElementById('fsBtn').addEventListener('click', e => {
   e.preventDefault();
-  if (document.fullscreenElement){ if (document.exitFullscreen) document.exitFullscreen(); }
-  else enterFs();
+  if (inFs()) exitFs(); else enterFs();
 });
+const fsExitBtn = document.getElementById('fsExit');
+if (fsExitBtn && fsExitBtn.addEventListener) fsExitBtn.addEventListener('click', e => { e.preventDefault(); exitFs(); });
 document.addEventListener('fullscreenchange', fitCanvas);
-if (typeof window.addEventListener === 'function') window.addEventListener('resize', fitCanvas);
+document.addEventListener('webkitfullscreenchange', fitCanvas);
+if (typeof window.addEventListener === 'function'){
+  window.addEventListener('resize', fitCanvas);
+  window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 250));
+}
 
 // ---------- input ----------
 let hasTouch = false;
